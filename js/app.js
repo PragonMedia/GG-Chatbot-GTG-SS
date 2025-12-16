@@ -23,7 +23,7 @@ async function fetchRouteData(domain, route) {
   }
 
   try {
-    const apiUrl = `http://138.68.231.226:3000/api/v1/domain-route-details?domain=${encodeURIComponent(
+    const apiUrl = `/api/v1/domain-route-details?domain=${encodeURIComponent(
       domain
     )}&route=${encodeURIComponent(route)}`;
     const response = await fetch(apiUrl, {
