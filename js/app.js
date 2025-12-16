@@ -50,10 +50,8 @@ let ringbaID = "CAd4c016a37829477688c3482fb6fd01de"; // Fallback default
 
 // Fetch route data on page load
 (async function initRingbaID() {
-  // HARD CODED FOR TESTING
-  // const { domain, route } = getDomainAndRoute();
-  const domain = "sample-new-domain";
-  const route = "nn-new";
+  // Use the function to get domain and route from URL
+  const { domain, route } = getDomainAndRoute();
 
   console.log(
     "TESTING - Fetching route data for domain:",
