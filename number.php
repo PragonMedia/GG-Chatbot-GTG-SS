@@ -72,14 +72,10 @@ function fetchRouteData($domain, $route)
   return $data;
 }
 
-// HARD CODED FOR TESTING - Extract domain and route
-// $domainRoute = getDomainAndRoute();
-// $domain = $domainRoute['domain'];
-// $route = $domainRoute['route'];
-
-// TESTING: Hard coded values
-$domain = "sample-new-domain";
-$route = "nn-new";
+// Extract domain and route from URL
+$domainRoute = getDomainAndRoute();
+$domain = $domainRoute['domain'];
+$route = $domainRoute['route'];
 
 // Fetch route data from API
 $routeData = null;
