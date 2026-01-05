@@ -1,3 +1,25 @@
+// Helper function to preserve all original URL parameters when modifying URL
+// This ensures tracking parameters (bbg_*, mb, account, angle, key, channel, etc.) are never lost
+function preserveUrlParams(url) {
+  // Restore original parameters from sessionStorage
+  const storedParams = sessionStorage.getItem("original_url_params");
+  if (storedParams) {
+    try {
+      const originalParams = JSON.parse(storedParams);
+      // Add all original parameters that aren't already in the URL
+      // This preserves tracking parameters that might have been lost
+      for (const [k, v] of Object.entries(originalParams)) {
+        if (!url.searchParams.has(k) && v != null && v !== "") {
+          url.searchParams.set(k, v);
+        }
+      }
+    } catch (e) {
+      console.error("Error preserving original params:", e);
+    }
+  }
+  return url;
+}
+
 // Function to extract domain and route from current URL
 function getDomainAndRoute() {
   const url = new URL(window.location.href);
@@ -184,6 +206,8 @@ let speed = 500;
 
 function updateAgeGroup(ageGroup) {
   let url = new URL(window.location.href);
+  // Preserve all original parameters first
+  url = preserveUrlParams(url);
   url.searchParams.delete("u65consumer");
   url.searchParams.delete("o65consumer");
   if (ageGroup === "under65") {
@@ -250,6 +274,8 @@ $("button.chat-button").on("click", function () {
     $("#userBlock_q2").removeClass("hidden");
 
     var newUrl = new URL(window.location.href); // Define the URL once
+    // Preserve all original parameters first
+    newUrl = preserveUrlParams(newUrl);
 
     if (buttonValue == "below 65") {
       $("#msg_under_q2").removeClass("hidden");
@@ -373,6 +399,8 @@ $("button.chat-button").on("click", function () {
     $("#userBlock_q3").removeClass("hidden");
 
     var newUrl = new URL(window.location.href); // Define the URL once
+    // Preserve all original parameters first
+    newUrl = preserveUrlParams(newUrl);
 
     if (buttonValue == "Yes") {
       $("#msg_yes_q3").removeClass("hidden");
@@ -456,6 +484,8 @@ $("button.chat-button").on("click", function () {
                 } else {
                   // Show iframe button (gtg is "0" or null/undefined)
                   const currentUrl = new URL(window.location.href);
+                  // Preserve all original parameters
+                  preserveUrlParams(currentUrl);
                   const clickID =
                     localStorage.getItem("rt_clickid") ||
                     currentUrl.searchParams.get("clickid") ||
