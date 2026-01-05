@@ -82,16 +82,35 @@ $routeData = null;
 $phoneNumber = "18664982822"; // Fallback default
 
 if (!empty($domain) && !empty($route)) {
+  error_log("API Request - Fetching phoneNumber for domain: " . $domain . ", route: " . $route);
   $apiData = fetchRouteData($domain, $route);
-  if ($apiData && isset($apiData['success']) && $apiData['success'] && isset($apiData['routeData']['phoneNumber'])) {
-    $phoneNumber = $apiData['routeData']['phoneNumber'];
-    // Remove + if present
-    $phoneNumber = str_replace('+', '', $phoneNumber);
+  
+  if ($apiData && isset($apiData['success']) && $apiData['success']) {
+    if (isset($apiData['routeData']['phoneNumber'])) {
+      $phoneNumber = $apiData['routeData']['phoneNumber'];
+      // Remove + if present
+      $phoneNumber = str_replace('+', '', $phoneNumber);
+      error_log("✅ API Response - phoneNumber pulled from API: " . $phoneNumber);
+    } else {
+      error_log("⚠️ API Response - phoneNumber not in response, using fallback: " . $phoneNumber);
+    }
+    
+    // Log complete API response for debugging
+    error_log("API Response - Complete data: " . json_encode([
+      'success' => $apiData['success'] ?? false,
+      'phoneNumber' => $apiData['routeData']['phoneNumber'] ?? 'not provided',
+      'ringbaID' => $apiData['routeData']['ringbaID'] ?? 'not provided',
+      'rtkID' => $apiData['routeData']['rtkID'] ?? 'not provided'
+    ]));
+  } else {
+    error_log("❌ API Response - Failed or invalid, using fallback phoneNumber: " . $phoneNumber);
   }
+} else {
+  error_log("⚠️ API Request - Missing domain or route, using fallback phoneNumber: " . $phoneNumber);
 }
 
 // Log phoneNumber for testing (will be visible in response)
-error_log("TESTING - phoneNumber: " . $phoneNumber);
+error_log("📞 FINAL - phoneNumber being used: " . $phoneNumber);
 
 // Return the phone number as JSON
 echo json_encode([
