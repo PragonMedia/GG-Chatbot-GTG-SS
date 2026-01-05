@@ -75,34 +75,22 @@ let ringbaID = "CAd4c016a37829477688c3482fb6fd01de"; // Fallback default
   // Use the function to get domain and route from URL
   const { domain, route } = getDomainAndRoute();
 
-  console.log(
-    "TESTING - Fetching route data for domain:",
-    domain,
-    "route:",
-    route
-  );
-
   if (domain && route) {
     const apiData = await fetchRouteData(domain, route);
-    if (
-      apiData &&
-      apiData.success &&
-      apiData.routeData &&
-      apiData.routeData.ringbaID
-    ) {
-      ringbaID = apiData.routeData.ringbaID;
-      console.log("TESTING - RingbaID loaded from API:", ringbaID);
-    } else {
-      console.log("TESTING - Using fallback RingbaID:", ringbaID);
-    }
 
-    // Log all IDs for testing
     if (apiData && apiData.success && apiData.routeData) {
-      console.log("TESTING - API Response Data:");
-      console.log("  - ringbaID:", apiData.routeData.ringbaID);
-      console.log("  - phoneNumber:", apiData.routeData.phoneNumber);
-      console.log("  - rtkID:", apiData.routeData.rtkID);
+      // Log values from API
+      if (apiData.routeData.ringbaID) {
+        ringbaID = apiData.routeData.ringbaID;
+        console.log("ringbaID from API:", ringbaID);
+      } else {
+        console.log("ringbaID from fallback:", ringbaID);
+      }
+    } else {
+      console.log("ringbaID from fallback:", ringbaID);
     }
+  } else {
+    console.log("ringbaID from fallback:", ringbaID);
   }
 })();
 
