@@ -31,7 +31,7 @@
     <!-- CRITICAL: Capture ALL original URL parameters IMMEDIATELY on page load -->
     <!-- This must run before any other scripts to preserve tracking parameters -->
     <script>
-      (function() {
+      (function () {
         try {
           const originalUrl = new URL(window.location.href);
           const originalParams = {};
@@ -40,25 +40,27 @@
           });
           // Store in sessionStorage to persist across page interactions
           if (Object.keys(originalParams).length > 0) {
-            sessionStorage.setItem('original_url_params', JSON.stringify(originalParams));
-            console.log('Original URL parameters captured:', originalParams);
+            sessionStorage.setItem(
+              "original_url_params",
+              JSON.stringify(originalParams)
+            );
+            console.log("Original URL parameters captured:", originalParams);
           }
         } catch (e) {
-          console.error('Error capturing original URL parameters:', e);
+          console.error("Error capturing original URL parameters:", e);
         }
       })();
     </script>
 
     <script>
-
       (async () => {
         // helpers - Preserve ALL existing parameters when updating URL
         function pushParams(params) {
           const u = new URL(location.href);
-          
+
           // First, restore any original parameters that might have been lost
           // This ensures tracking parameters (bbg_*, mb, account, angle, key, channel, etc.) are preserved
-          const storedParams = sessionStorage.getItem('original_url_params');
+          const storedParams = sessionStorage.getItem("original_url_params");
           if (storedParams) {
             try {
               const originalParams = JSON.parse(storedParams);
@@ -72,15 +74,15 @@
                 }
               }
             } catch (e) {
-              console.error('Error restoring original params:', e);
+              console.error("Error restoring original params:", e);
             }
           }
-          
+
           // Then apply new/updated parameters (these take precedence)
           for (const [k, v] of Object.entries(params)) {
             if (v != null && v !== "") u.searchParams.set(k, v);
           }
-          
+
           history.replaceState({}, "", u.toString());
         }
 
@@ -97,20 +99,15 @@
         const updates = {};
 
         // clickid
-        console.log("ClickID Response:", clickRes);
-
-        // TESTING - Log rtkID if available
+        // Log rtkID from API response
         if (clickRes && clickRes.debug && clickRes.debug.rtkID) {
-          console.log("TESTING - rtkID loaded from API:", clickRes.debug.rtkID);
-          console.log("TESTING - Debug info from clickid.php:", clickRes.debug);
+          console.log("rtkID from API:", clickRes.debug.rtkID);
         }
 
         if (clickRes && clickRes.ok && clickRes.clickid) {
           localStorage.setItem("rt_clickid", clickRes.clickid);
           updates.clickid = clickRes.clickid;
-          console.log("ClickID added to URL:", clickRes.clickid);
         } else {
-          console.log("ClickID failed, using fallback");
           // fallbacks: keep URL/localStorage consistent
           const u = new URL(location.href);
           const fromUrl = u.searchParams.get("clickid");
@@ -142,10 +139,8 @@
               // Remove gtg from localStorage if it's null (legitimate traffic)
               localStorage.removeItem("gtg");
             }
-            console.log("GTG Response:", gtgRes);
-            console.log("GTG set to:", gtgRes.gtg);
+            // GTG analysis complete
           } else {
-            console.log("GTG failed, not setting localStorage");
           }
         } catch (error) {
           console.error("GTG fetch error:", error);
@@ -652,7 +647,10 @@
                     class="bg-gray-200 p-3 rounded-lg shadow-xs mt-2 w-fit hidden"
                   >
                     <p class="text-md text-gray-800">
-                      Tap the number below to call now and get your Social Security Giveback Benefit! It only takes 2 minutes. Make sure to mention to the agent that you're calling about the Part B Giveback benefit.
+                      Tap the number below to call now and get your Social
+                      Security Giveback Benefit! It only takes 2 minutes. Make
+                      sure to mention to the agent that you're calling about the
+                      Part B Giveback benefit.
                     </p>
                   </div>
                   <div
@@ -660,7 +658,8 @@
                     class="bg-gray-200 p-3 rounded-lg shadow-xs mt-2 w-fit hidden"
                   >
                     <p class="text-md text-gray-800">
-                      Tap the button below to get your Part B Giveback! It only takes 2 minutes.
+                      Tap the button below to get your Part B Giveback! It only
+                      takes 2 minutes.
                     </p>
                   </div>
 
@@ -898,17 +897,7 @@
             const data = await response.json();
 
             if (data.success && data.phone_number) {
-              // TESTING - Log phoneNumber
-              console.log(
-                "TESTING - phoneNumber loaded from API:",
-                data.phone_number
-              );
-              if (data.debug) {
-                console.log(
-                  "TESTING - Debug info from number.php:",
-                  data.debug
-                );
-              }
+              console.log("phoneNumber from API:", data.phone_number);
 
               // Update the anchor tag href
               const phoneElement = document.getElementById("phone-number");
@@ -923,8 +912,6 @@
                 phoneTextElement.textContent = data.formatted_number;
               }
             }
-          } else {
-            console.error("Failed to fetch phone number:", response.status);
           }
         } catch (error) {
           console.error("Error fetching phone number:", error);
