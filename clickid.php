@@ -83,11 +83,16 @@ if (!empty($domain) && !empty($route)) {
   if ($apiData && isset($apiData['success']) && $apiData['success'] && array_key_exists('rtkID', $apiData['routeData'])) {
     // Use the value from API, even if it's null
     $cmpId = $apiData['routeData']['rtkID'];
+    error_log("API Response - rtkID pulled from API: " . ($cmpId ?? 'null'));
+  } else {
+    error_log("API Response - Using fallback rtkID: " . $cmpId);
   }
+} else {
+  error_log("API Request - Missing domain/route, using fallback rtkID: " . $cmpId);
 }
 
 // Log rtkID for testing
-error_log("TESTING - rtkID: " . $cmpId);
+error_log("FINAL - rtkID being used: " . ($cmpId ?? 'null'));
 
 
 
@@ -112,6 +117,8 @@ $referrer = $_SERVER['HTTP_REFERER'] ?? '';   // full current page URL (ensure R
 /* --- Cache hit? --- */
 $now = time();
 if (!empty($_SESSION[SESSION_KEY]) && !empty($_SESSION[SESSION_KEY . '_ts']) && ($now - $_SESSION[SESSION_KEY . '_ts']) < SESSION_TTL) {
+  error_log("📋 clickid - Using cached clickid: " . $_SESSION[SESSION_KEY]);
+  error_log("📋 rtkID - Being used (cached): " . ($cmpId ?? 'null'));
   echo json_encode([
     'ok'      => true,
     'clickid' => (string)$_SESSION[SESSION_KEY],
@@ -227,6 +234,8 @@ setcookie(COOKIE_NAME, $clickid, [
 ]);
 
 /* --- Return --- */
+error_log("✅ clickid - Successfully minted: " . $clickid);
+error_log("📋 rtkID - Used for RedTrack request: " . ($cmpId ?? 'null'));
 echo json_encode([
   'ok'      => true,
   'clickid' => $clickid,
