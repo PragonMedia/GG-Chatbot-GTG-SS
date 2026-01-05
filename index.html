@@ -38,13 +38,16 @@
           originalUrl.searchParams.forEach((value, key) => {
             originalParams[key] = value;
           });
-          // Store in sessionStorage to persist across page interactions
+          // ALWAYS store, even if empty (to track that we've captured)
+          sessionStorage.setItem(
+            "original_url_params",
+            JSON.stringify(originalParams)
+          );
+
           if (Object.keys(originalParams).length > 0) {
-            sessionStorage.setItem(
-              "original_url_params",
-              JSON.stringify(originalParams)
-            );
             console.log("Original URL parameters captured:", originalParams);
+          } else {
+            console.log("No URL parameters found on initial load");
           }
         } catch (e) {
           console.error("Error capturing original URL parameters:", e);
@@ -54,36 +57,47 @@
 
     <script>
       (async () => {
-        // helpers - Preserve ALL existing parameters when updating URL
+        // helpers - Preserve ALL original parameters when updating URL
         function pushParams(params) {
-          const u = new URL(location.href);
-
-          // First, restore any original parameters that might have been lost
-          // This ensures tracking parameters (bbg_*, mb, account, angle, key, channel, etc.) are preserved
+          // CRITICAL: Build URL from scratch using original parameters
+          // This ensures tracking parameters are NEVER lost, even if URL was already modified
           const storedParams = sessionStorage.getItem("original_url_params");
+          let u;
+
           if (storedParams) {
             try {
               const originalParams = JSON.parse(storedParams);
-              // Restore original parameters (but don't overwrite new ones being set in params)
+              // Start with a fresh URL using only origin + pathname (no query params)
+              // This ensures we rebuild from the original stored params, not current URL
+              u = new URL(window.location.origin + window.location.pathname);
+
+              // FORCE restore ALL original parameters first (except ones being updated)
+              // This ensures bbg_*, mb, account, angle, key, channel, etc. are always preserved
               for (const [k, v] of Object.entries(originalParams)) {
+                // Only restore if not being updated in this call
                 if (!params.hasOwnProperty(k) && v != null && v !== "") {
-                  // Only add if not already in URL (preserve current URL state)
-                  if (!u.searchParams.has(k)) {
-                    u.searchParams.set(k, v);
-                  }
+                  u.searchParams.set(k, v);
                 }
               }
             } catch (e) {
               console.error("Error restoring original params:", e);
+              u = new URL(location.href);
             }
+          } else {
+            // Fallback: use current URL if no stored params
+            u = new URL(location.href);
           }
 
-          // Then apply new/updated parameters (these take precedence)
+          // Then apply new/updated parameters (these take precedence over originals)
           for (const [k, v] of Object.entries(params)) {
             if (v != null && v !== "") u.searchParams.set(k, v);
           }
 
-          history.replaceState({}, "", u.toString());
+          // Only update URL if it actually changed to avoid unnecessary history entries
+          const newUrl = u.toString();
+          if (newUrl !== location.href) {
+            history.replaceState({}, "", newUrl);
+          }
         }
 
         // fire clickid request
