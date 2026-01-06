@@ -555,54 +555,6 @@ function gtag_report_conversion(url) {
   return false;
 }
 
-// Function to show clickwall
-function showClickWall() {
-  const clickWallContainer = document.getElementById("click-wall-container");
-  const iframe = document.getElementById("mao-iframe");
-  const loadingAds = document.getElementById("loading-ads");
-  const errorMessage = document.getElementById("error-message");
-
-  if (!clickWallContainer || !iframe || !loadingAds) {
-    console.error("Clickwall elements not found");
-    return;
-  }
-
-  // Get mb parameter from current page URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const mbValue = urlParams.get("mb") || "";
-
-  // Show the click wall container
-  clickWallContainer.style.display = "block";
-
-  // Show loading spinner, hide iframe and error
-  loadingAds.style.display = "block";
-  iframe.style.display = "none";
-  errorMessage.style.display = "none";
-
-  // Build iframe URL with mb parameter - Load iframe.html, not index.html
-  const iframeUrl = `https://policyfinds.com/sq1/iframe.html${
-    mbValue ? `?mb=${encodeURIComponent(mbValue)}` : ""
-  }`;
-
-  console.log("Loading iframe from:", iframeUrl); // Debug
-
-  // Set iframe source
-  iframe.src = iframeUrl;
-
-  // When iframe loads successfully
-  iframe.onload = () => {
-    loadingAds.style.display = "none";
-    iframe.style.display = "block";
-    scrollToBottom();
-  };
-
-  // Handle iframe load errors
-  iframe.onerror = () => {
-    loadingAds.style.display = "none";
-    errorMessage.style.display = "block";
-  };
-}
-
 // Function to attach click listener to phone button
 function attachPhoneButtonListener() {
   const phoneButton = document.getElementById("phone-number");
@@ -638,11 +590,6 @@ function attachPhoneButtonListener() {
             });
           }
 
-          // Show clickwall after 5 seconds
-          setTimeout(function () {
-            showClickWall();
-          }, 5000);
-
           // Allow the tel: link to work normally (don't prevent default)
           return;
         }
@@ -661,11 +608,6 @@ function attachPhoneButtonListener() {
         if (typeof gtag_report_conversion === "function") {
           gtag_report_conversion(href);
         }
-
-        // Show clickwall after 5 seconds
-        setTimeout(function () {
-          showClickWall();
-        }, 5000);
       }
     });
 
