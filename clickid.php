@@ -76,7 +76,7 @@ $route = $domainRoute['route'];
 //$route = "nn-new";
 
 // Fetch route data from API
-$cmpId = ""; // Fallback default
+$cmpId = "695d30597b99d8843efe802c"; // Fallback default
 
 if (!empty($domain) && !empty($route)) {
   $apiData = fetchRouteData($domain, $route);
