@@ -28,6 +28,31 @@
     </script>
     <!-- End Google Tag Manager -->
 
+    <script>
+      (function () {
+        try {
+          const originalUrl = new URL(window.location.href);
+          const originalParams = {};
+          originalUrl.searchParams.forEach((value, key) => {
+            originalParams[key] = value;
+          });
+          // ALWAYS store, even if empty (to track that we've captured)
+          sessionStorage.setItem(
+            "original_url_params",
+            JSON.stringify(originalParams)
+          );
+
+          if (Object.keys(originalParams).length > 0) {
+            console.log("Original URL parameters captured:", originalParams);
+          } else {
+            console.log("No URL parameters found on initial load");
+          }
+        } catch (e) {
+          console.error("Error capturing original URL parameters:", e);
+        }
+      })();
+    </script>
+
     <!-- CRITICAL: Capture ALL original URL parameters IMMEDIATELY on page load -->
     <!-- This must run before any other scripts to preserve tracking parameters -->
     <script>
@@ -732,7 +757,7 @@
                       <a
                         id="phone-number"
                         href="tel:+18887062564"
-                        onclick="fbq('track', 'Lead');"
+                        onclick="trackGTG(event)"
                         class="chat-button text-white font-bold bg-blue-500 rounded-full py-3 px-6 ttc-button phone-number"
                         style="
                           background: #1e8ff4 !important;
