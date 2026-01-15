@@ -496,13 +496,6 @@ $("button.chat-button").on("click", function () {
                   // Update phone number reactively before showing button
                   updatePhoneNumberReactive();
                   $("#msg17").removeClass("hidden");
-                  // Add gtgTrigger class to phone number when user clicks Yes on Medicare Part A and Part B question
-                  const phoneNumberElement =
-                    document.getElementById("phone-number");
-                  if (phoneNumberElement) {
-                    phoneNumberElement.classList.add("gtgTrigger");
-                    console.log("gtgTrigger added to phone number");
-                  }
                   scrollToBottom();
                   startCountdown();
                 }, 500);
@@ -602,118 +595,124 @@ function gtag_report_conversion(url) {
 }
 
 // Function to attach click listener to phone button
-function attachPhoneButtonListener() {
-  const phoneButton = document.getElementById("phone-number");
-  if (phoneButton && !phoneButton.hasAttribute("data-gtag-listener-attached")) {
-    // Attach the click event listener
-    phoneButton.addEventListener("click", function (e) {
-      const href = this.getAttribute("href");
-      if (href) {
-        // Execute existing onclick handler if present (for fbq tracking)
-        const existingOnclick = this.getAttribute("onclick");
-        if (existingOnclick) {
-          try {
-            eval(existingOnclick);
-          } catch (err) {
-            console.error("Error executing existing onclick:", err);
-          }
-        }
+// MUTED FOR TESTING - Check for double firing
+// function attachPhoneButtonListener() {
+//   const phoneButton = document.getElementById("phone-number");
+//   if (phoneButton && !phoneButton.hasAttribute("data-gtag-listener-attached")) {
+//     // Attach the click event listener
+//     phoneButton.addEventListener("click", function (e) {
+//       const href = this.getAttribute("href");
+//       if (href) {
+//         // Execute existing onclick handler if present (for fbq tracking)
+//         // MUTED FOR TESTING - Check for double firing
+//         // const existingOnclick = this.getAttribute("onclick");
+//         // if (existingOnclick) {
+//         //   try {
+//         //     eval(existingOnclick);
+//         //   } catch (err) {
+//         //     console.error("Error executing existing onclick:", err);
+//         //   }
+//         // }
 
-        // Check if user answered "No" to Medicare Part A and Part B question
-        const qualifiedParam = new URL(window.location.href).searchParams.get(
-          "qualified"
-        );
+//         // Check if user answered "No" to Medicare Part A and Part B question
+//         const qualifiedParam = new URL(window.location.href).searchParams.get(
+//           "qualified"
+//         );
 
-        // For tel: links, allow default behavior (phone dialer opens)
-        // Don't prevent default so the link works normally
-        if (href.startsWith("tel:")) {
-          // Track conversion without preventing default
-          if (qualifiedParam !== "no" && typeof gtag === "function") {
-            gtag("event", "conversion", {
-              send_to: "AW-16921817895/4s4iCJv-wb8bEKfm-YQ_",
-              value: 1.0,
-              currency: "USD",
-            });
-          }
+//         // For tel: links, allow default behavior (phone dialer opens)
+//         // Don't prevent default so the link works normally
+//         if (href.startsWith("tel:")) {
+//           // Track conversion without preventing default
+//           // MUTED FOR TESTING - Check for double firing
+//           // if (qualifiedParam !== "no" && typeof gtag === "function") {
+//           //   gtag("event", "conversion", {
+//           //     send_to: "AW-16921817895/4s4iCJv-wb8bEKfm-YQ_",
+//           //     value: 1.0,
+//           //     currency: "USD",
+//           //   });
+//           // }
 
-          // Allow the tel: link to work normally (don't prevent default)
-          return;
-        }
+//           // Allow the tel: link to work normally (don't prevent default)
+//           return;
+//         }
 
-        // For non-tel links, handle navigation
-        e.preventDefault();
-        if (qualifiedParam === "no") {
-          console.log(
-            "Google Tag Manager conversion blocked: User answered 'No' to Medicare Part A and Part B question"
-          );
-          window.location = href;
-          return;
-        }
+//         // For non-tel links, handle navigation
+//         e.preventDefault();
+//         if (qualifiedParam === "no") {
+//           console.log(
+//             "Google Tag Manager conversion blocked: User answered 'No' to Medicare Part A and Part B question"
+//           );
+//           window.location = href;
+//           return;
+//         }
 
-        // Call gtag conversion tracking for non-tel links
-        if (typeof gtag_report_conversion === "function") {
-          gtag_report_conversion(href);
-        }
-      }
-    });
+//         // Call gtag conversion tracking for non-tel links
+//         if (typeof gtag_report_conversion === "function") {
+//           gtag_report_conversion(href);
+//         }
+//       }
+//     });
 
-    // Mark as attached to avoid duplicates
-    phoneButton.setAttribute("data-gtag-listener-attached", "true");
-    return true; // Successfully attached
-  }
-  return false; // Button not found yet or already attached
-}
+//     // Mark as attached to avoid duplicates
+//     phoneButton.setAttribute("data-gtag-listener-attached", "true");
+//     return true; // Successfully attached
+//   }
+//   return false; // Button not found yet or already attached
+// }
 
 // Try to attach listener when DOM is ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", function () {
-    attachPhoneButtonListener();
-  });
-} else {
-  // DOM already loaded, try to attach immediately
-  attachPhoneButtonListener();
-}
+// MUTED FOR TESTING - Check for double firing
+// if (document.readyState === "loading") {
+//   document.addEventListener("DOMContentLoaded", function () {
+//     attachPhoneButtonListener();
+//   });
+// } else {
+//   // DOM already loaded, try to attach immediately
+//   attachPhoneButtonListener();
+// }
 
 // Use MutationObserver to watch for when the button becomes visible
 // This handles the case where the button is initially hidden
-const observer = new MutationObserver(function (mutations) {
-  mutations.forEach(function (mutation) {
-    // Check for when msg17 (parent container) becomes visible
-    if (mutation.type === "attributes" && mutation.attributeName === "class") {
-      const msg17 = document.getElementById("msg17");
-      if (msg17 && !msg17.classList.contains("hidden")) {
-        // Parent is now visible, try to attach listener to phone button
-        attachPhoneButtonListener();
-      }
-    }
-    // Also check for childList changes in case button is added dynamically
-    if (mutation.type === "childList") {
-      attachPhoneButtonListener();
-    }
-  });
-});
+// MUTED FOR TESTING - Check for double firing
+// const observer = new MutationObserver(function (mutations) {
+//   mutations.forEach(function (mutation) {
+//     // Check for when msg17 (parent container) becomes visible
+//     if (mutation.type === "attributes" && mutation.attributeName === "class") {
+//       const msg17 = document.getElementById("msg17");
+//       if (msg17 && !msg17.classList.contains("hidden")) {
+//         // Parent is now visible, try to attach listener to phone button
+//         attachPhoneButtonListener();
+//       }
+//     }
+//     // Also check for childList changes in case button is added dynamically
+//     if (mutation.type === "childList") {
+//       attachPhoneButtonListener();
+//     }
+//   });
+// });
 
 // Start observing when DOM is ready
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", function () {
-    const msg17 = document.getElementById("msg17");
-    if (msg17) {
-      observer.observe(msg17, {
-        attributes: true,
-        attributeFilter: ["class"],
-        childList: true,
-        subtree: true,
-      });
-    }
-  });
-} else {
-  const msg17 = document.getElementById("msg17");
-  if (msg17) {
-    observer.observe(msg17, {
-      attributes: true,
-      attributeFilter: ["class"],
-      childList: true,
-      subtree: true,
-    });
-  }
-}
+// MUTED FOR TESTING - Check for double firing
+// if (document.readyState === "loading") {
+//   document.addEventListener("DOMContentLoaded", function () {
+//     const msg17 = document.getElementById("msg17");
+//     if (msg17) {
+//       observer.observe(msg17, {
+//         attributes: true,
+//         attributeFilter: ["class"],
+//         childList: true,
+//         subtree: true,
+//       });
+//     }
+//   });
+// } else {
+//   const msg17 = document.getElementById("msg17");
+//   if (msg17) {
+//     observer.observe(msg17, {
+//       attributes: true,
+//       attributeFilter: ["class"],
+//       childList: true,
+//       subtree: true,
+//     });
+//   }
+// }
