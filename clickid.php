@@ -78,17 +78,24 @@ $route = $domainRoute['route'];
 // Fetch route data from API
 $cmpId = "695d30597b99d8843efe802c"; // Fallback default
 
-if (!empty($domain) && !empty($route)) {
-  $apiData = fetchRouteData($domain, $route);
-  if ($apiData && isset($apiData['success']) && $apiData['success'] && array_key_exists('rtkID', $apiData['routeData'])) {
-    // Use the value from API, even if it's null
-    $cmpId = $apiData['routeData']['rtkID'];
-    error_log("API Response - rtkID pulled from API: " . ($cmpId ?? 'null'));
-  } else {
-    error_log("API Response - Using fallback rtkID: " . $cmpId);
-  }
+// OPTIMIZATION: Check if rtkID was passed from frontend (single API call approach)
+if (isset($_POST['rtkID']) && $_POST['rtkID'] !== '') {
+  $cmpId = $_POST['rtkID'];
+  error_log("rtkID received from frontend (single API call): " . ($cmpId ?? 'null'));
 } else {
-  error_log("API Request - Missing domain/route, using fallback rtkID: " . $cmpId);
+  // Fallback: Fetch from API (backward compatibility)
+  if (!empty($domain) && !empty($route)) {
+    $apiData = fetchRouteData($domain, $route);
+    if ($apiData && isset($apiData['success']) && $apiData['success'] && array_key_exists('rtkID', $apiData['routeData'])) {
+      // Use the value from API, even if it's null
+      $cmpId = $apiData['routeData']['rtkID'];
+      error_log("API Response - rtkID pulled from API (fallback): " . ($cmpId ?? 'null'));
+    } else {
+      error_log("API Response - Using fallback rtkID: " . $cmpId);
+    }
+  } else {
+    error_log("API Request - Missing domain/route, using fallback rtkID: " . $cmpId);
+  }
 }
 
 // Log rtkID for testing
