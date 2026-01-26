@@ -27,30 +27,29 @@
       })(window, document, "script", "dataLayer", "GTM-MC55FSL5");
     </script>
     <!-- End Google Tag Manager -->
-
+    
     <script>
-      (function () {
-        try {
-          const originalUrl = new URL(window.location.href);
-          const originalParams = {};
-          originalUrl.searchParams.forEach((value, key) => {
-            originalParams[key] = value;
-          });
-          // ALWAYS store, even if empty (to track that we've captured)
-          sessionStorage.setItem(
-            "original_url_params",
-            JSON.stringify(originalParams)
-          );
+    function trackGTG(e) {
+  e.preventDefault();
 
-          if (Object.keys(originalParams).length > 0) {
-            console.log("Original URL parameters captured:", originalParams);
-          } else {
-            console.log("No URL parameters found on initial load");
-          }
-        } catch (e) {
-          console.error("Error capturing original URL parameters:", e);
-        }
-      })();
+  const phoneLink = document.getElementById("phone-number").href;
+
+  // Always push GTM event first
+  window.dataLayer = window.dataLayer || [];
+  dataLayer.push({ event: "gtg_clicked" });
+
+  // Fire Facebook pixel safely
+  try {
+    if (typeof fbq === "function") {
+      fbq("track", "Lead");
+    }
+  } catch (e) {}
+
+  // Always dial, even if tracking fails
+  setTimeout(() => {
+    window.location.href = phoneLink;
+  }, 150);
+}
     </script>
 
     <!-- CRITICAL: Capture ALL original URL parameters IMMEDIATELY on page load -->
@@ -80,7 +79,7 @@
       })();
     </script>
 
-    <script>
+   <script>
       (async () => {
         // helpers - Preserve ALL original parameters when updating URL
         function pushParams(params) {
@@ -125,10 +124,59 @@
           }
         }
 
-        // fire clickid request
+        // Function to extract domain and route from current URL
+        function getDomainAndRoute() {
+          const url = new URL(window.location.href);
+          let domain = url.hostname;
+          domain = domain.replace(/^www\./, "");
+          const path = url.pathname;
+          const pathSegments = path
+            .split("/")
+            .filter((segment) => segment && !segment.includes("."));
+          const route = pathSegments[0] || "";
+          return { domain, route };
+        }
+
+        // SINGLE API CALL - Fetch route configuration once
+        window.routeConfig = null;
+        const { domain, route } = getDomainAndRoute();
+        
+        if (domain && route) {
+          try {
+            const apiUrl = `/api/v1/domain-route-details?domain=${encodeURIComponent(domain)}&route=${encodeURIComponent(route)}`;
+            const response = await fetch(apiUrl, {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+              },
+            });
+
+            if (response.ok) {
+              const apiData = await response.json();
+              if (apiData && apiData.success && apiData.routeData) {
+                window.routeConfig = {
+                  rtkID: apiData.routeData.rtkID || null,
+                  phoneNumber: apiData.routeData.phoneNumber || null,
+                  ringbaID: apiData.routeData.ringbaID || null,
+                };
+                console.log("Route config fetched (single API call):", window.routeConfig);
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching route config:", error);
+          }
+        }
+
+        // fire clickid request - pass rtkID if available
+        const clickReqBody = new FormData();
+        if (window.routeConfig && window.routeConfig.rtkID !== null) {
+          clickReqBody.append("rtkID", window.routeConfig.rtkID);
+        }
+
         const clickReq = fetch("./clickid.php", {
           method: "POST",
           credentials: "include",
+          body: clickReqBody,
         })
           .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
           .catch(() => null);
@@ -191,25 +239,48 @@
       window.phoneNumberData = null;
       window.phoneNumberPromise = (async () => {
         try {
-          const response = await fetch("./number.php", {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
+          // Use phoneNumber from routeConfig if available, otherwise fetch from PHP
+          if (window.routeConfig && window.routeConfig.phoneNumber) {
+            const phoneNumber = window.routeConfig.phoneNumber.replace(/^\+/, "");
+            const formattedNumber = '+1 (' + phoneNumber.substring(1, 4) + ') ' + phoneNumber.substring(4, 7) + '-' + phoneNumber.substring(7, 11);
+            
+            window.phoneNumberData = {
+              phone_number: phoneNumber,
+              formatted_number: formattedNumber,
+            };
+            console.log("phoneNumber from route config:", phoneNumber);
+            
+            // Update phone number in DOM if elements exist
+            updatePhoneNumberInDOM(phoneNumber, formattedNumber);
+          } else {
+            // Fallback: fetch from PHP endpoint (which will use its own fallback)
+            const phoneNumberParam = window.routeConfig && window.routeConfig.phoneNumber 
+              ? encodeURIComponent(window.routeConfig.phoneNumber) 
+              : '';
+            const numberUrl = phoneNumberParam 
+              ? `./number.php?phoneNumber=${phoneNumberParam}`
+              : './number.php';
+            
+            const response = await fetch(numberUrl, {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            });
 
-          if (response.ok) {
-            const data = await response.json();
+            if (response.ok) {
+              const data = await response.json();
 
-            if (data.success && data.phone_number) {
-              window.phoneNumberData = {
-                phone_number: data.phone_number,
-                formatted_number: data.formatted_number,
-              };
-              console.log("phoneNumber from API (early fetch):", data.phone_number);
-              
-              // Update phone number in DOM if elements exist
-              updatePhoneNumberInDOM(data.phone_number, data.formatted_number);
+              if (data.success && data.phone_number) {
+                window.phoneNumberData = {
+                  phone_number: data.phone_number,
+                  formatted_number: data.formatted_number,
+                };
+                console.log("phoneNumber from PHP endpoint:", data.phone_number);
+                
+                // Update phone number in DOM if elements exist
+                updatePhoneNumberInDOM(data.phone_number, data.formatted_number);
+              }
             }
           }
         } catch (error) {
@@ -366,8 +437,8 @@
               class="font-bold text-xl sm:text-3xl mt-1"
               style="color: rgb(75 85 99)"
             >
-              Ending Soon: 2026 Medicare Giveback Benefit Can Provide Extra
-              Social Security Money Every Month.
+            Ending Soon: 2026 Medicare Giveback Benefit Can Provide Extra
+            Social Security Money Every Month.
             </h2>
           </div>
           <div class="w-full md:col-span-1 text-center block">
@@ -839,7 +910,6 @@
                   </div>
                 </div>
               </div>
-
               <!-- Disconnect message -->
               <div id="disconnected" class="pt-2 hidden">
                 <div class="relative flex py-5 items-center">
@@ -902,12 +972,12 @@
     <script src="./js/jquery-3.7.1.min.js"></script>
     <script src="./js/app.js"></script>
 
-    <script>
+     <script>
       // Backup: Update phone number when DOM is ready (if early fetch hasn't completed)
       document.addEventListener("DOMContentLoaded", async function () {
         // Wait a bit to see if early fetch completed
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
         // If phone number data is already available, update DOM
         if (window.phoneNumberData) {
           updatePhoneNumberInDOM(
