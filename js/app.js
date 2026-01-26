@@ -107,25 +107,40 @@ let ringbaID = "CAd4c016a37829477688c3482fb6fd01de"; // Fallback default
 
 // Fetch route data on page load
 (async function initRingbaID() {
-  // Use the function to get domain and route from URL
-  const { domain, route } = getDomainAndRoute();
+  // OPTIMIZATION: Use routeConfig from single API call (set in index.html)
+  // Wait a bit for routeConfig to be available
+  let attempts = 0;
+  const maxAttempts = 10;
+  
+  while (!window.routeConfig && attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    attempts++;
+  }
 
-  if (domain && route) {
-    const apiData = await fetchRouteData(domain, route);
+  if (window.routeConfig && window.routeConfig.ringbaID) {
+    ringbaID = window.routeConfig.ringbaID;
+    console.log("ringbaID from route config (single API call):", ringbaID);
+  } else {
+    // Fallback: Use the function to get domain and route from URL and fetch from API
+    const { domain, route } = getDomainAndRoute();
 
-    if (apiData && apiData.success && apiData.routeData) {
-      // Log values from API
-      if (apiData.routeData.ringbaID) {
-        ringbaID = apiData.routeData.ringbaID;
-        console.log("ringbaID from API:", ringbaID);
+    if (domain && route) {
+      const apiData = await fetchRouteData(domain, route);
+
+      if (apiData && apiData.success && apiData.routeData) {
+        // Log values from API
+        if (apiData.routeData.ringbaID) {
+          ringbaID = apiData.routeData.ringbaID;
+          console.log("ringbaID from API (fallback):", ringbaID);
+        } else {
+          console.log("ringbaID from fallback:", ringbaID);
+        }
       } else {
         console.log("ringbaID from fallback:", ringbaID);
       }
     } else {
       console.log("ringbaID from fallback:", ringbaID);
     }
-  } else {
-    console.log("ringbaID from fallback:", ringbaID);
   }
 })();
 
