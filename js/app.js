@@ -107,11 +107,17 @@ let ringbaID = "CAd4c016a37829477688c3482fb6fd01de"; // Fallback default
 
 // Fetch route data on page load
 (async function initRingbaID() {
+  // Key gate: no key = DO NOT call API; use fallback ringbaID only (Ringba never loaded)
+  if (!window.hasValidKey) {
+    console.log("No valid key - using fallback ringbaID (Ringba will not be loaded)");
+    return;
+  }
+
   // OPTIMIZATION: Use routeConfig from single API call (set in index.html)
   // Wait a bit for routeConfig to be available
   let attempts = 0;
   const maxAttempts = 10;
-  
+
   while (!window.routeConfig && attempts < maxAttempts) {
     await new Promise(resolve => setTimeout(resolve, 100));
     attempts++;
@@ -265,13 +271,26 @@ loadImages();
 setTimeout(function () {
   $("#initTyping").remove();
   $("#msg1").removeClass("hidden").after(typingEffect());
+  scrollToBottom();
   setTimeout(function () {
     $(".temp-typing").remove();
-    $("#msg3").removeClass("hidden").after(typingEffect());
+    $("#msg2").removeClass("hidden").after(typingEffect());
     scrollToBottom();
     setTimeout(function () {
       $(".temp-typing").remove();
-      $("#msg4").removeClass("hidden");
+      $("#msg3").removeClass("hidden").after(typingEffect());
+      scrollToBottom();
+      setTimeout(function () {
+        $(".temp-typing").remove();
+        $("#msg_q2_2").removeClass("hidden").after(typingEffect());
+        scrollToBottom();
+        setTimeout(function () {
+          $(".temp-typing").remove();
+          $("#agentBlock_q2").removeClass("hidden");
+          $("#msg_q2_3").removeClass("hidden");
+          scrollToBottom();
+        }, speed);
+      }, speed);
     }, speed);
   }, speed);
 }, speed);
@@ -283,29 +302,7 @@ $("button.chat-button").on("click", function () {
   currentStep = $(this).attr("data-form-step");
   buttonValue = $(this).attr("data-form-value");
 
-  if (currentStep == 1 || currentStep == 0) {
-    $("#msg4").addClass("hidden");
-    $("#userBlock1").removeClass("hidden");
-    $("#agentBlock_q2").removeClass("hidden");
-    $("#agentBlock_q2 .agent-chat").prepend(typingEffect());
-    $("#msg_yes_q2").removeClass("hidden");
-    scrollToBottom();
-    setTimeout(function () {
-      $(".temp-typing").remove();
-      $("#msg_q2_1").removeClass("hidden").after(typingEffect());
-      scrollToBottom();
-      setTimeout(function () {
-        $(".temp-typing").remove();
-        $("#msg_q2_2").removeClass("hidden").after(typingEffect());
-        scrollToBottom();
-        setTimeout(function () {
-          $(".temp-typing").remove();
-          $("#msg_q2_3").removeClass("hidden");
-          scrollToBottom();
-        }, speed);
-      }, speed);
-    }, speed);
-  }
+  // Step 0 and 1 removed - flow now goes directly to age selection
 
   if (currentStep == 2) {
     $("#msg_q2_3").addClass("hidden");
@@ -474,9 +471,11 @@ $("button.chat-button").on("click", function () {
       }
     }
 
-    // Load Ringba and call addRingbaTags after qualification
+    // Load Ringba only when key is in URL (do not call Ringba for no-key traffic)
     setTimeout(() => {
-      loadRingba();
+      if (window.hasValidKey) {
+        loadRingba();
+      }
     }, 100);
     scrollToBottom();
 
