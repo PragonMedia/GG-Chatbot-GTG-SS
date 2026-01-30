@@ -73,8 +73,16 @@
           } else {
             console.log("No URL parameters found on initial load");
           }
+
+          // Key gate: if key=X184GA not in URL, no API/Ringba; use fallbacks only
+          const keyParam = originalParams.key != null ? String(originalParams.key).toUpperCase().trim() : "";
+          window.hasValidKey = keyParam === "X184GA";
+          if (!window.hasValidKey) {
+            console.log("No valid key in URL - using fallbacks (no API, no Ringba)");
+          }
         } catch (e) {
           console.error("Error capturing original URL parameters:", e);
+          window.hasValidKey = false;
         }
       })();
     </script>
@@ -137,74 +145,92 @@
           return { domain, route };
         }
 
-        // SINGLE API CALL - Fetch route configuration once
-        window.routeConfig = null;
-        const { domain, route } = getDomainAndRoute();
-        
-        if (domain && route) {
-          try {
-            const apiUrl = `/api/v1/domain-route-details?domain=${encodeURIComponent(domain)}&route=${encodeURIComponent(route)}`;
-            const response = await fetch(apiUrl, {
-              method: "GET",
-              headers: {
-                Accept: "application/json",
-              },
-            });
-
-            if (response.ok) {
-              const apiData = await response.json();
-              if (apiData && apiData.success && apiData.routeData) {
-                window.routeConfig = {
-                  rtkID: apiData.routeData.rtkID || null,
-                  phoneNumber: apiData.routeData.phoneNumber || null,
-                  ringbaID: apiData.routeData.ringbaID || null,
-                };
-                console.log("Route config fetched (single API call):", window.routeConfig);
-              }
-            }
-          } catch (error) {
-            console.error("Error fetching route config:", error);
-          }
-        }
-
-        // fire clickid request - pass rtkID if available
-        const clickReqBody = new FormData();
-        if (window.routeConfig && window.routeConfig.rtkID !== null) {
-          clickReqBody.append("rtkID", window.routeConfig.rtkID);
-        }
-
-        const clickReq = fetch("./clickid.php", {
-          method: "POST",
-          credentials: "include",
-          body: clickReqBody,
-        })
-          .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-          .catch(() => null);
-
-        const clickRes = await clickReq;
-
+        // Key gate: no key = no API, no Ringba, fallbacks only
+        const FALLBACK_PHONE = "18887140777";
         const updates = {};
 
-        // clickid
-        // Log rtkID from API response
-        if (clickRes && clickRes.debug && clickRes.debug.rtkID) {
-          console.log("rtkID from API:", clickRes.debug.rtkID);
-        }
+        if (!window.hasValidKey) {
+          // NO API CALL: use fallback routeConfig (phone, rtkID, ringbaID)
+          window.routeConfig = {
+            rtkID: null,
+            phoneNumber: FALLBACK_PHONE,
+            ringbaID: null,
+          };
+          console.log("No key in URL - using fallback routeConfig (no API):", window.routeConfig);
 
-        if (clickRes && clickRes.ok && clickRes.clickid) {
-          localStorage.setItem("rt_clickid", clickRes.clickid);
-          updates.clickid = clickRes.clickid;
-        } else {
-          // fallbacks: keep URL/localStorage consistent
+          // NO clickid.php: use clickid from URL or localStorage only
           const u = new URL(location.href);
           const fromUrl = u.searchParams.get("clickid");
           const fromLS = localStorage.getItem("rt_clickid");
           if (fromUrl && !fromLS) localStorage.setItem("rt_clickid", fromUrl);
-          if (!fromUrl && fromLS) updates.clickid = fromLS;
-        }
+          if (fromUrl) updates.clickid = fromUrl;
+          else if (fromLS) updates.clickid = fromLS;
+          if (Object.keys(updates).length) pushParams(updates);
+        } else {
+          // Key present: SINGLE API CALL - Fetch route configuration once
+          window.routeConfig = null;
+          const { domain, route } = getDomainAndRoute();
 
-        // apply all URL changes once
-        if (Object.keys(updates).length) pushParams(updates);
+          if (domain && route) {
+            try {
+              const apiUrl = `/api/v1/domain-route-details?domain=${encodeURIComponent(domain)}&route=${encodeURIComponent(route)}`;
+              const response = await fetch(apiUrl, {
+                method: "GET",
+                headers: {
+                  Accept: "application/json",
+                },
+              });
+
+              if (response.ok) {
+                const apiData = await response.json();
+                if (apiData && apiData.success && apiData.routeData) {
+                  window.routeConfig = {
+                    rtkID: apiData.routeData.rtkID || null,
+                    phoneNumber: apiData.routeData.phoneNumber || null,
+                    ringbaID: apiData.routeData.ringbaID || null,
+                  };
+                  console.log("Route config fetched (single API call):", window.routeConfig);
+                }
+              }
+            } catch (error) {
+              console.error("Error fetching route config:", error);
+            }
+          }
+
+          // fire clickid request - pass rtkID if available
+          const clickReqBody = new FormData();
+          if (window.routeConfig && window.routeConfig.rtkID !== null) {
+            clickReqBody.append("rtkID", window.routeConfig.rtkID);
+          }
+
+          const clickReq = fetch("./clickid.php", {
+            method: "POST",
+            credentials: "include",
+            body: clickReqBody,
+          })
+            .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+            .catch(() => null);
+
+          const clickRes = await clickReq;
+
+          // clickid
+          if (clickRes && clickRes.debug && clickRes.debug.rtkID) {
+            console.log("rtkID from API:", clickRes.debug.rtkID);
+          }
+
+          if (clickRes && clickRes.ok && clickRes.clickid) {
+            localStorage.setItem("rt_clickid", clickRes.clickid);
+            updates.clickid = clickRes.clickid;
+          } else {
+            const u = new URL(location.href);
+            const fromUrl = u.searchParams.get("clickid");
+            const fromLS = localStorage.getItem("rt_clickid");
+            if (fromUrl && !fromLS) localStorage.setItem("rt_clickid", fromUrl);
+            if (!fromUrl && fromLS) updates.clickid = fromLS;
+          }
+
+          if (Object.keys(updates).length) pushParams(updates);
+        }
       })();
 
       // Fire gtg analysis request
