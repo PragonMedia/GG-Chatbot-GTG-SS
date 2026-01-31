@@ -107,46 +107,25 @@ let ringbaID = "CAd4c016a37829477688c3482fb6fd01de"; // Fallback default
 
 // Fetch route data on page load
 (async function initRingbaID() {
-  // Key gate: no key = DO NOT call API; use fallback ringbaID only (Ringba never loaded)
-  if (!window.hasValidKey) {
-    console.log("No valid key - using fallback ringbaID (Ringba will not be loaded)");
-    return;
-  }
+  // Use the function to get domain and route from URL
+  const { domain, route } = getDomainAndRoute();
 
-  // OPTIMIZATION: Use routeConfig from single API call (set in index.html)
-  // Wait a bit for routeConfig to be available
-  let attempts = 0;
-  const maxAttempts = 10;
+  if (domain && route) {
+    const apiData = await fetchRouteData(domain, route);
 
-  while (!window.routeConfig && attempts < maxAttempts) {
-    await new Promise(resolve => setTimeout(resolve, 100));
-    attempts++;
-  }
-
-  if (window.routeConfig && window.routeConfig.ringbaID) {
-    ringbaID = window.routeConfig.ringbaID;
-    console.log("ringbaID from route config (single API call):", ringbaID);
-  } else {
-    // Fallback: Use the function to get domain and route from URL and fetch from API
-    const { domain, route } = getDomainAndRoute();
-
-    if (domain && route) {
-      const apiData = await fetchRouteData(domain, route);
-
-      if (apiData && apiData.success && apiData.routeData) {
-        // Log values from API
-        if (apiData.routeData.ringbaID) {
-          ringbaID = apiData.routeData.ringbaID;
-          console.log("ringbaID from API (fallback):", ringbaID);
-        } else {
-          console.log("ringbaID from fallback:", ringbaID);
-        }
+    if (apiData && apiData.success && apiData.routeData) {
+      // Log values from API
+      if (apiData.routeData.ringbaID) {
+        ringbaID = apiData.routeData.ringbaID;
+        console.log("ringbaID from API:", ringbaID);
       } else {
         console.log("ringbaID from fallback:", ringbaID);
       }
     } else {
       console.log("ringbaID from fallback:", ringbaID);
     }
+  } else {
+    console.log("ringbaID from fallback:", ringbaID);
   }
 })();
 
@@ -271,26 +250,13 @@ loadImages();
 setTimeout(function () {
   $("#initTyping").remove();
   $("#msg1").removeClass("hidden").after(typingEffect());
-  scrollToBottom();
   setTimeout(function () {
     $(".temp-typing").remove();
-    $("#msg2").removeClass("hidden").after(typingEffect());
+    $("#msg3").removeClass("hidden").after(typingEffect());
     scrollToBottom();
     setTimeout(function () {
       $(".temp-typing").remove();
-      $("#msg3").removeClass("hidden").after(typingEffect());
-      scrollToBottom();
-      setTimeout(function () {
-        $(".temp-typing").remove();
-        $("#msg_q2_2").removeClass("hidden").after(typingEffect());
-        scrollToBottom();
-        setTimeout(function () {
-          $(".temp-typing").remove();
-          $("#agentBlock_q2").removeClass("hidden");
-          $("#msg_q2_3").removeClass("hidden");
-          scrollToBottom();
-        }, speed);
-      }, speed);
+      $("#msg4").removeClass("hidden");
     }, speed);
   }, speed);
 }, speed);
@@ -302,7 +268,29 @@ $("button.chat-button").on("click", function () {
   currentStep = $(this).attr("data-form-step");
   buttonValue = $(this).attr("data-form-value");
 
-  // Step 0 and 1 removed - flow now goes directly to age selection
+  if (currentStep == 1 || currentStep == 0) {
+    $("#msg4").addClass("hidden");
+    $("#userBlock1").removeClass("hidden");
+    $("#agentBlock_q2").removeClass("hidden");
+    $("#agentBlock_q2 .agent-chat").prepend(typingEffect());
+    $("#msg_yes_q2").removeClass("hidden");
+    scrollToBottom();
+    setTimeout(function () {
+      $(".temp-typing").remove();
+      $("#msg_q2_1").removeClass("hidden").after(typingEffect());
+      scrollToBottom();
+      setTimeout(function () {
+        $(".temp-typing").remove();
+        $("#msg_q2_2").removeClass("hidden").after(typingEffect());
+        scrollToBottom();
+        setTimeout(function () {
+          $(".temp-typing").remove();
+          $("#msg_q2_3").removeClass("hidden");
+          scrollToBottom();
+        }, speed);
+      }, speed);
+    }, speed);
+  }
 
   if (currentStep == 2) {
     $("#msg_q2_3").addClass("hidden");
@@ -471,11 +459,9 @@ $("button.chat-button").on("click", function () {
       }
     }
 
-    // Load Ringba only when key is in URL (do not call Ringba for no-key traffic)
+    // Load Ringba and call addRingbaTags after qualification
     setTimeout(() => {
-      if (window.hasValidKey) {
-        loadRingba();
-      }
+      loadRingba();
     }, 100);
     scrollToBottom();
 
