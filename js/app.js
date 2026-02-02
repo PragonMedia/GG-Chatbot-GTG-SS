@@ -36,17 +36,8 @@ function setPhoneButtonLoading(loading) {
   }
 }
 
-// Helper: update link and visible text from raw number (uses formatPhoneForDisplay for formatted_number)
-function applyPhoneToDOM(rawPhoneNumber) {
-  if (!window.updatePhoneNumberInDOM || !rawPhoneNumber) return;
-  const raw = String(rawPhoneNumber).replace(/\D/g, "");
-  if (raw.length < 10) return;
-  const formatted = raw.length >= 11 ? "+1 (" + raw.slice(1, 4) + ") " + raw.slice(4, 7) + "-" + raw.slice(7, 11) : raw;
-  window.updatePhoneNumberInDOM(raw, formatted);
-}
-
 // Reactive phone number update - called ONLY when we are about to show the phone step (qualified users).
-// Calls number.php and uses its response for display. If we have saved route data, show it first so user never sees only the HTML default.
+// Only sets href and visible text from number.php response. On failure we leave DOM unchanged (HTML default or domainRouteData if we set it first).
 async function updatePhoneNumberReactive() {
   if (!window.updatePhoneNumberInDOM) return;
 
@@ -54,9 +45,13 @@ async function updatePhoneNumberReactive() {
   const textEl = document.getElementById("phone_retreaver");
   if (!link || !textEl) return;
 
-  // If we have saved route data, show that number immediately so visible text is never the hardcoded HTML default
+  // Optional: show saved route number immediately so user sees a number while we fetch (only when we have it)
   if (window.domainRouteData && window.domainRouteData.routeData && window.domainRouteData.routeData.phoneNumber) {
-    applyPhoneToDOM(window.domainRouteData.routeData.phoneNumber);
+    const raw = String(window.domainRouteData.routeData.phoneNumber).replace(/\D/g, "");
+    if (raw.length >= 10) {
+      const formatted = raw.length >= 11 ? "+1 (" + raw.slice(1, 4) + ") " + raw.slice(4, 7) + "-" + raw.slice(7, 11) : raw;
+      window.updatePhoneNumberInDOM(raw, formatted);
+    }
   }
 
   setPhoneButtonLoading(true);
@@ -74,21 +69,16 @@ async function updatePhoneNumberReactive() {
 
     const data = response.ok ? await response.json() : null;
     if (data && data.success && data.phone_number) {
+      // Always use digits-only for href so we never get "tel:++1..." or wrong format
       const raw = String(data.phone_number).replace(/\D/g, "");
       const formatted = data.formatted_number || (raw.length >= 11 ? "+1 (" + raw.slice(1, 4) + ") " + raw.slice(4, 7) + "-" + raw.slice(7, 11) : raw);
-      window.updatePhoneNumberInDOM(data.phone_number, formatted);
-      window.phoneNumberData = { phone_number: data.phone_number, formatted_number: formatted };
-    } else if (!response.ok || !data || !data.success) {
-      // Fetch failed or bad response: keep domainRouteData number if we already set it, else set fallback
-      if (!window.domainRouteData || !window.domainRouteData.routeData || !window.domainRouteData.routeData.phoneNumber) {
-        applyPhoneToDOM("18887062564");
-      }
+      window.updatePhoneNumberInDOM(raw, formatted);
+      window.phoneNumberData = { phone_number: raw, formatted_number: formatted };
     }
+    // On failure: do not overwrite DOM - leave whatever we have (domainRouteData from above, or HTML default)
   } catch (error) {
     console.error("Error fetching phone number (qualified step):", error);
-    if (!window.domainRouteData || !window.domainRouteData.routeData || !window.domainRouteData.routeData.phoneNumber) {
-      applyPhoneToDOM("18887062564");
-    }
+    // Do not overwrite href/text on error - leave DOM as-is
   } finally {
     setPhoneButtonLoading(false);
   }
