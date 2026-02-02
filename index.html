@@ -188,15 +188,15 @@
       // Phone number is NOT fetched on page load (moved to qualified step only - see app.js updatePhoneNumberReactive)
       window.phoneNumberData = null;
 
-      // Function to update phone number in DOM (reusable)
+      // Function to update phone number in DOM (reusable). phoneNumber: digits only (or will be stripped). formattedNumber: display text.
       function updatePhoneNumberInDOM(phoneNumber, formattedNumber) {
+        const digits = String(phoneNumber).replace(/\D/g, "");
         const phoneElement = document.getElementById("phone-number");
-        if (phoneElement) {
-          phoneElement.href = "tel:+" + phoneNumber;
+        if (phoneElement && digits.length >= 10) {
+          phoneElement.href = "tel:+" + digits;
         }
-
         const phoneTextElement = document.getElementById("phone_retreaver");
-        if (phoneTextElement) {
+        if (phoneTextElement && formattedNumber) {
           phoneTextElement.textContent = formattedNumber;
         }
       }
