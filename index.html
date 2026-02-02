@@ -28,7 +28,7 @@
     </script>
     <!-- End Google Tag Manager -->
     
-    <script>
+   <script>
     function trackGTG(e) {
   e.preventDefault();
 
@@ -185,36 +185,8 @@
         }
       })();
 
-      // Fire phone number request early (parallel with other API calls)
-      // Store phone number data globally for reactive updates
+      // Phone number is NOT fetched on page load (moved to qualified step only - see app.js updatePhoneNumberReactive)
       window.phoneNumberData = null;
-      window.phoneNumberPromise = (async () => {
-        try {
-          const response = await fetch("./number.php", {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-
-            if (data.success && data.phone_number) {
-              window.phoneNumberData = {
-                phone_number: data.phone_number,
-                formatted_number: data.formatted_number,
-              };
-              console.log("phoneNumber from API (early fetch):", data.phone_number);
-              
-              // Update phone number in DOM if elements exist
-              updatePhoneNumberInDOM(data.phone_number, data.formatted_number);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching phone number (early fetch):", error);
-        }
-      })();
 
       // Function to update phone number in DOM (reusable)
       function updatePhoneNumberInDOM(phoneNumber, formattedNumber) {
