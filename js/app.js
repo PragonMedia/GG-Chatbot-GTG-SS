@@ -20,38 +20,64 @@ function preserveUrlParams(url) {
   return url;
 }
 
-// Reactive phone number update function
-// Called when phone button (msg17) is about to be shown
-// Updates phone number if API data is available, or waits briefly for it
-async function updatePhoneNumberReactive() {
-  // If phone number data is already available, update immediately
-  if (window.phoneNumberData && window.updatePhoneNumberInDOM) {
-    window.updatePhoneNumberInDOM(
-      window.phoneNumberData.phone_number,
-      window.phoneNumberData.formatted_number
-    );
-    return;
+// Show loader on phone button (called before fetching number.php)
+function setPhoneButtonLoading(loading) {
+  const link = document.getElementById("phone-number");
+  const textEl = document.getElementById("phone_retreaver");
+  if (!link || !textEl) return;
+  if (loading) {
+    link.classList.add("phone-number-loading");
+    link.href = "javascript:void(0)";
+    link.style.pointerEvents = "none";
+    textEl.textContent = "Loading...";
+  } else {
+    link.classList.remove("phone-number-loading");
+    link.style.pointerEvents = "";
   }
+}
 
-  // If promise exists but hasn't resolved yet, wait for it (with timeout)
-  if (window.phoneNumberPromise) {
-    try {
-      // Wait up to 300ms for the promise to resolve
-      await Promise.race([
-        window.phoneNumberPromise,
-        new Promise((resolve) => setTimeout(resolve, 300)),
-      ]);
+// Reactive phone number update - called ONLY when we are about to show the phone step (qualified users).
+// ALWAYS calls number.php and uses its response for display (never cached/saved data for display).
+// Loader is shown on the button until number.php responds.
+async function updatePhoneNumberReactive() {
+  if (!window.updatePhoneNumberInDOM) return;
 
-      // If data is now available, update it
-      if (window.phoneNumberData && window.updatePhoneNumberInDOM) {
-        window.updatePhoneNumberInDOM(
-          window.phoneNumberData.phone_number,
-          window.phoneNumberData.formatted_number
-        );
-      }
-    } catch (error) {
-      console.error("Error in reactive phone number update:", error);
+  const link = document.getElementById("phone-number");
+  const textEl = document.getElementById("phone_retreaver");
+  if (!link || !textEl) return;
+
+  // Show loader so user sees we're fetching the number from number.php
+  setPhoneButtonLoading(true);
+
+  try {
+    // Always call number.php; pass saved number if we have it so number.php doesn't call API again, but we use number.php's response for display
+    let url = "./number.php";
+    if (window.domainRouteData && window.domainRouteData.routeData && window.domainRouteData.routeData.phoneNumber) {
+      const raw = String(window.domainRouteData.routeData.phoneNumber).replace(/\D/g, "");
+      url += "?phoneNumber=" + encodeURIComponent(raw);
     }
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.phone_number && data.formatted_number) {
+        // Always use the number produced by number.php for display and link
+        window.updatePhoneNumberInDOM(data.phone_number, data.formatted_number);
+        window.phoneNumberData = {
+          phone_number: data.phone_number,
+          formatted_number: data.formatted_number,
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching phone number (qualified step):", error);
+    textEl.textContent = "+1 (866) 498-2822";
+    link.href = "tel:+18887062564";
+  } finally {
+    setPhoneButtonLoading(false);
   }
 }
 
@@ -105,7 +131,7 @@ async function fetchRouteData(domain, route) {
 // Global variable to store ringbaID
 let ringbaID = "CAd4c016a37829477688c3482fb6fd01de"; // Fallback default
 
-// Fetch route data on page load
+// Fetch route data on page load (saved for phone number when qualified - number.php is NOT called on load)
 (async function initRingbaID() {
   // Use the function to get domain and route from URL
   const { domain, route } = getDomainAndRoute();
@@ -114,7 +140,8 @@ let ringbaID = "CAd4c016a37829477688c3482fb6fd01de"; // Fallback default
     const apiData = await fetchRouteData(domain, route);
 
     if (apiData && apiData.success && apiData.routeData) {
-      // Log values from API
+      // Save full route data for use when we show phone step (qualified users only)
+      window.domainRouteData = apiData;
       if (apiData.routeData.ringbaID) {
         ringbaID = apiData.routeData.ringbaID;
         console.log("ringbaID from API:", ringbaID);
