@@ -778,3 +778,29 @@ video {
     transform: scale(1);
   }
 }
+
+/* Phone number button loader - shown while number.php is fetching */
+.phone-number-loading {
+  position: relative;
+  opacity: 0.9;
+}
+.phone-number-loading #phone_retreaver {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.phone-number-loading #phone_retreaver::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: phone-number-spin 0.7s linear infinite;
+}
+@keyframes phone-number-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
