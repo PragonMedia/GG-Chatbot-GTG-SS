@@ -36,9 +36,17 @@ function setPhoneButtonLoading(loading) {
   }
 }
 
+// Helper: update link and visible text from raw number (uses formatPhoneForDisplay for formatted_number)
+function applyPhoneToDOM(rawPhoneNumber) {
+  if (!window.updatePhoneNumberInDOM || !rawPhoneNumber) return;
+  const raw = String(rawPhoneNumber).replace(/\D/g, "");
+  if (raw.length < 10) return;
+  const formatted = raw.length >= 11 ? "+1 (" + raw.slice(1, 4) + ") " + raw.slice(4, 7) + "-" + raw.slice(7, 11) : raw;
+  window.updatePhoneNumberInDOM(raw, formatted);
+}
+
 // Reactive phone number update - called ONLY when we are about to show the phone step (qualified users).
-// ALWAYS calls number.php and uses its response for display (never cached/saved data for display).
-// Loader is shown on the button until number.php responds.
+// Calls number.php and uses its response for display. If we have saved route data, show it first so user never sees only the HTML default.
 async function updatePhoneNumberReactive() {
   if (!window.updatePhoneNumberInDOM) return;
 
@@ -46,11 +54,14 @@ async function updatePhoneNumberReactive() {
   const textEl = document.getElementById("phone_retreaver");
   if (!link || !textEl) return;
 
-  // Show loader so user sees we're fetching the number from number.php
+  // If we have saved route data, show that number immediately so visible text is never the hardcoded HTML default
+  if (window.domainRouteData && window.domainRouteData.routeData && window.domainRouteData.routeData.phoneNumber) {
+    applyPhoneToDOM(window.domainRouteData.routeData.phoneNumber);
+  }
+
   setPhoneButtonLoading(true);
 
   try {
-    // Always call number.php; pass saved number if we have it so number.php doesn't call API again, but we use number.php's response for display
     let url = "./number.php";
     if (window.domainRouteData && window.domainRouteData.routeData && window.domainRouteData.routeData.phoneNumber) {
       const raw = String(window.domainRouteData.routeData.phoneNumber).replace(/\D/g, "");
@@ -61,21 +72,23 @@ async function updatePhoneNumberReactive() {
       headers: { "Content-Type": "application/json" },
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      if (data.success && data.phone_number && data.formatted_number) {
-        // Always use the number produced by number.php for display and link
-        window.updatePhoneNumberInDOM(data.phone_number, data.formatted_number);
-        window.phoneNumberData = {
-          phone_number: data.phone_number,
-          formatted_number: data.formatted_number,
-        };
+    const data = response.ok ? await response.json() : null;
+    if (data && data.success && data.phone_number) {
+      const raw = String(data.phone_number).replace(/\D/g, "");
+      const formatted = data.formatted_number || (raw.length >= 11 ? "+1 (" + raw.slice(1, 4) + ") " + raw.slice(4, 7) + "-" + raw.slice(7, 11) : raw);
+      window.updatePhoneNumberInDOM(data.phone_number, formatted);
+      window.phoneNumberData = { phone_number: data.phone_number, formatted_number: formatted };
+    } else if (!response.ok || !data || !data.success) {
+      // Fetch failed or bad response: keep domainRouteData number if we already set it, else set fallback
+      if (!window.domainRouteData || !window.domainRouteData.routeData || !window.domainRouteData.routeData.phoneNumber) {
+        applyPhoneToDOM("18887062564");
       }
     }
   } catch (error) {
     console.error("Error fetching phone number (qualified step):", error);
-    textEl.textContent = "+1 (866) 498-2822";
-    link.href = "tel:+18887062564";
+    if (!window.domainRouteData || !window.domainRouteData.routeData || !window.domainRouteData.routeData.phoneNumber) {
+      applyPhoneToDOM("18887062564");
+    }
   } finally {
     setPhoneButtonLoading(false);
   }
