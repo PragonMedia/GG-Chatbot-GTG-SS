@@ -47,15 +47,7 @@ async function updatePhoneNumberReactive() {
   const textEl = document.getElementById("phone_retreaver");
   if (!link || !textEl) return;
 
-  // Optional: show saved route number so user sees a number while we fetch (only when we have it)
-  if (window.domainRouteData && window.domainRouteData.routeData && window.domainRouteData.routeData.phoneNumber) {
-    const raw = String(window.domainRouteData.routeData.phoneNumber).replace(/\D/g, "");
-    if (raw.length >= 10) {
-      const formatted = raw.length >= 11 ? "+1 (" + raw.slice(1, 4) + ") " + raw.slice(4, 7) + "-" + raw.slice(7, 11) : raw;
-      window.updatePhoneNumberInDOM(raw, formatted);
-    }
-  }
-
+  // Loader only: don't set any number until number.php and Ringba are done (avoids visible "replace" on frontend).
   setPhoneButtonLoading(true);
 
   try {
@@ -279,7 +271,7 @@ function loadImages() {
   });
 }
 
-let speed = 500;
+let speed = 750;
 
 function updateAgeGroup(ageGroup) {
   let url = new URL(window.location.href);
@@ -462,7 +454,7 @@ $("button.chat-button").on("click", function () {
                     $("#msg17").removeClass("hidden");
                     scrollToBottom();
                     startCountdown();
-                  }, 500);
+                  }, 750);
                 }, speed);
               }, speed);
             }, speed);
@@ -550,7 +542,7 @@ $("button.chat-button").on("click", function () {
                     $("#msg17").removeClass("hidden");
                     scrollToBottom();
                     startCountdown();
-                  }, 500);
+                  }, 750);
                 } else if (buttonValue == "No") {
                 // Get gtg value from localStorage
                 const gtgValue = localStorage.getItem("gtg");
