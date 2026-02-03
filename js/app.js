@@ -37,7 +37,9 @@ function setPhoneButtonLoading(loading) {
 }
 
 // Reactive phone number update - called ONLY when we are about to show the phone step (qualified users).
-// Only sets href and visible text from number.php response. On failure we leave DOM unchanged (HTML default or domainRouteData if we set it first).
+// 1) Get publisher number from number.php and set href (so Ringba knows who to associate with).
+// 2) Then load Ringba (only after href is set).
+// 3) Only enable the phone button when BOTH number.php is done AND Ringba script has loaded.
 async function updatePhoneNumberReactive() {
   if (!window.updatePhoneNumberInDOM) return;
 
@@ -45,7 +47,7 @@ async function updatePhoneNumberReactive() {
   const textEl = document.getElementById("phone_retreaver");
   if (!link || !textEl) return;
 
-  // Optional: show saved route number immediately so user sees a number while we fetch (only when we have it)
+  // Optional: show saved route number so user sees a number while we fetch (only when we have it)
   if (window.domainRouteData && window.domainRouteData.routeData && window.domainRouteData.routeData.phoneNumber) {
     const raw = String(window.domainRouteData.routeData.phoneNumber).replace(/\D/g, "");
     if (raw.length >= 10) {
@@ -69,16 +71,17 @@ async function updatePhoneNumberReactive() {
 
     const data = response.ok ? await response.json() : null;
     if (data && data.success && data.phone_number) {
-      // Always use digits-only for href so we never get "tel:++1..." or wrong format
       const raw = String(data.phone_number).replace(/\D/g, "");
       const formatted = data.formatted_number || (raw.length >= 11 ? "+1 (" + raw.slice(1, 4) + ") " + raw.slice(4, 7) + "-" + raw.slice(7, 11) : raw);
       window.updatePhoneNumberInDOM(raw, formatted);
       window.phoneNumberData = { phone_number: raw, formatted_number: formatted };
     }
-    // On failure: do not overwrite DOM - leave whatever we have (domainRouteData from above, or HTML default)
+
+    // Ringba must see the publisher number (href) before we load their script. Href is now set above.
+    // Load Ringba and wait for script to load before enabling the button.
+    await loadRingba();
   } catch (error) {
-    console.error("Error fetching phone number (qualified step):", error);
-    // Do not overwrite href/text on error - leave DOM as-is
+    console.error("Error fetching phone number or loading Ringba (qualified step):", error);
   } finally {
     setPhoneButtonLoading(false);
   }
@@ -159,16 +162,37 @@ let ringbaID = "CAd4c016a37829477688c3482fb6fd01de"; // Fallback default
   }
 })();
 
-// Load Ringba function - exactly as provided but as JavaScript function
+// Track Ringba trigger - POST to API when we trigger Ringba (domain required).
+function trackRingbaTrigger() {
+  const domain = (window.location.hostname || "").replace(/^www\./, "").trim();
+  if (!domain) return;
+  fetch("/api/v1/track/ringba-trigger", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ domain }),
+    credentials: "include",
+  }).catch((err) => console.error("Ringba trigger track error:", err));
+}
+
+// Load Ringba - returns a Promise that resolves when the script has loaded (so we only enable the phone button after Ringba is done).
 const loadRingba = () => {
-  var script = document.createElement("script");
-  script.src = `//b-js.ringba.com/${ringbaID}`;
-  let timeoutId = setTimeout(addRingbaTags, 1000);
-  script.onload = function () {
-    clearTimeout(timeoutId);
-    addRingbaTags();
-  };
-  document.head.appendChild(script);
+  trackRingbaTrigger();
+  return new Promise((resolve, reject) => {
+    if (document.querySelector('script[src*="b-js.ringba.com"]')) {
+      resolve();
+      return;
+    }
+    var script = document.createElement("script");
+    script.src = `//b-js.ringba.com/${ringbaID}`;
+    let timeoutId = setTimeout(addRingbaTags, 1000);
+    script.onload = function () {
+      clearTimeout(timeoutId);
+      addRingbaTags();
+      resolve();
+    };
+    script.onerror = () => reject(new Error("Ringba script failed to load"));
+    document.head.appendChild(script);
+  });
 };
 
 // Function to add tags - with age parameter and gtg added
@@ -489,47 +513,45 @@ $("button.chat-button").on("click", function () {
       }
     }
 
-    // Load Ringba and call addRingbaTags after qualification
-    setTimeout(() => {
-      loadRingba();
-    }, 100);
-    scrollToBottom();
-
-    setTimeout(function () {
-      $("#agentBlock4").removeClass("hidden");
+    // For "Yes" on Medicare: run number.php, loadRingba(), and ringba-trigger API now (before showing messages). For "No" we run it later when we show msg17 (step 4 path).
+    (async function () {
+      if (buttonValue == "Yes") {
+        await updatePhoneNumberReactive();
+      }
       scrollToBottom();
+
       setTimeout(function () {
-        $(".temp-typing").remove();
-        $("#msg13").removeClass("hidden").after(typingEffect());
+        $("#agentBlock4").removeClass("hidden");
         scrollToBottom();
         setTimeout(function () {
           $(".temp-typing").remove();
-          $("#msg14").removeClass("hidden").after(typingEffect());
+          $("#msg13").removeClass("hidden").after(typingEffect());
           scrollToBottom();
           setTimeout(function () {
             $(".temp-typing").remove();
-            // Show different message based on Yes/No answer
-            if (buttonValue == "Yes") {
-              $("#msg15").removeClass("hidden").after(typingEffect());
-            } else if (buttonValue == "No") {
-              $("#msg15_no").removeClass("hidden").after(typingEffect());
-            }
+            $("#msg14").removeClass("hidden").after(typingEffect());
             scrollToBottom();
             setTimeout(function () {
               $(".temp-typing").remove();
-              // Show phone button for "Yes", CLAIM NOW button for "No"
               if (buttonValue == "Yes") {
-                $("#msg17").before(typingEffect());
-                scrollToBottom();
-                setTimeout(function () {
-                  $(".temp-typing").remove();
-                  // Update phone number reactively before showing button
-                  updatePhoneNumberReactive();
-                  $("#msg17").removeClass("hidden");
-                  scrollToBottom();
-                  startCountdown();
-                }, 500);
+                $("#msg15").removeClass("hidden").after(typingEffect());
               } else if (buttonValue == "No") {
+                $("#msg15_no").removeClass("hidden").after(typingEffect());
+              }
+              scrollToBottom();
+              setTimeout(function () {
+                $(".temp-typing").remove();
+                if (buttonValue == "Yes") {
+                  // number.php, loadRingba, API already done when they clicked Yes
+                  $("#msg17").before(typingEffect());
+                  scrollToBottom();
+                  setTimeout(function () {
+                    $(".temp-typing").remove();
+                    $("#msg17").removeClass("hidden");
+                    scrollToBottom();
+                    startCountdown();
+                  }, 500);
+                } else if (buttonValue == "No") {
                 // Get gtg value from localStorage
                 const gtgValue = localStorage.getItem("gtg");
 
@@ -569,6 +591,7 @@ $("button.chat-button").on("click", function () {
         }, speed);
       }, speed);
     }, speed);
+    })();
 
     // Update the URL with the new qualified parameter
     window.history.replaceState({}, "", newUrl);
