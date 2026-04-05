@@ -28,39 +28,71 @@
     </script>
     <!-- End Google Tag Manager -->
     
-     <script>
-    function trackGTG(e) {
-  e.preventDefault();
+   <script>
+      var PLANCOMPARE_BASE = "https://plancompared.com/";
+      var PLANCOMPARE_REDIRECT_DELAY_MS = 7000;
+      var plancompareRedirectTimerId = null;
 
-  const phoneLink = document.getElementById("phone-number").href;
-  // Capture current URL params at click time for possible redirect
-  const currentSearch = window.location.search || "";
+      function isMobileForPlancompareRedirect() {
+        if (typeof window.innerWidth === "number" && window.innerWidth < 768) {
+          return true;
+        }
+        var ua = navigator.userAgent || "";
+        return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+          ua.toLowerCase(),
+        );
+      }
 
-  // Always push GTM event first
-  window.dataLayer = window.dataLayer || [];
-  dataLayer.push({ event: "gtg_clicked" });
+      function passesPlancompareUrlGate() {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get("key") !== "X184GA") return false;
+        var mb = params.get("mb");
+        if (mb == null || String(mb).trim() === "") return false;
+        return true;
+      }
 
-  // Fire Facebook pixel safely
-  try {
-    if (typeof fbq === "function") {
-      fbq("track", "Lead");
-    }
-  } catch (e) {}
+      function trackGTG(e) {
+        e.preventDefault();
 
-  // When gtg is null and qualified=yes: redirect to policyfinds.com with all URL params after 7 seconds
-  const gtgValue = localStorage.getItem("gtg");
-  const qualifiedParam = new URL(window.location.href).searchParams.get("qualified");
-  if ((gtgValue === null || gtgValue === undefined || gtgValue === "") && qualifiedParam === "yes") {
-    setTimeout(function () {
-      window.location.href = "https://policyfinds.com/" + (currentSearch ? currentSearch : "");
-    }, 7000);
-  }
+        const phoneLink = document.getElementById("phone-number").href;
 
-  // Always dial, even if tracking fails
-  setTimeout(() => {
-    window.location.href = phoneLink;
-  }, 150);
-}
+        // Always push GTM event first
+        window.dataLayer = window.dataLayer || [];
+        dataLayer.push({ event: "gtg_clicked" });
+
+        // Fire Facebook pixel safely
+        try {
+          if (typeof fbq === "function") {
+            fbq("track", "Lead");
+          }
+        } catch (e) {}
+
+        // When gtg is absent (null), URL has key=X184GA + mb, and user is mobile: redirect to plancompared.com with all URL params after 7s (aligned with test.js)
+        if (
+          localStorage.getItem("gtg") === null &&
+          passesPlancompareUrlGate() &&
+          isMobileForPlancompareRedirect()
+        ) {
+          if (plancompareRedirectTimerId != null) {
+            clearTimeout(plancompareRedirectTimerId);
+            plancompareRedirectTimerId = null;
+          }
+          plancompareRedirectTimerId = setTimeout(function () {
+            plancompareRedirectTimerId = null;
+            if (localStorage.getItem("gtg") !== null) return;
+            if (!passesPlancompareUrlGate()) return;
+            if (!isMobileForPlancompareRedirect()) return;
+            var q = window.location.search || "";
+            window.location.href =
+              PLANCOMPARE_BASE.replace(/\/?$/, "/") + (q || "");
+          }, PLANCOMPARE_REDIRECT_DELAY_MS);
+        }
+
+        // Always dial, even if tracking fails
+        setTimeout(() => {
+          window.location.href = phoneLink;
+        }, 150);
+      }
     </script>
 
     <!-- CRITICAL: Capture ALL original URL parameters IMMEDIATELY on page load -->
