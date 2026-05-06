@@ -52,8 +52,15 @@ async function updatePhoneNumberReactive() {
 
   try {
     let url = "./number.php";
-    if (window.domainRouteData && window.domainRouteData.routeData && window.domainRouteData.routeData.phoneNumber) {
-      const raw = String(window.domainRouteData.routeData.phoneNumber).replace(/\D/g, "");
+    if (
+      window.domainRouteData &&
+      window.domainRouteData.routeData &&
+      window.domainRouteData.routeData.phoneNumber
+    ) {
+      const raw = String(window.domainRouteData.routeData.phoneNumber).replace(
+        /\D/g,
+        "",
+      );
       url += "?phoneNumber=" + encodeURIComponent(raw);
     }
     const response = await fetch(url, {
@@ -64,16 +71,31 @@ async function updatePhoneNumberReactive() {
     const data = response.ok ? await response.json() : null;
     if (data && data.success && data.phone_number) {
       const raw = String(data.phone_number).replace(/\D/g, "");
-      const formatted = data.formatted_number || (raw.length >= 11 ? "+1 (" + raw.slice(1, 4) + ") " + raw.slice(4, 7) + "-" + raw.slice(7, 11) : raw);
+      const formatted =
+        data.formatted_number ||
+        (raw.length >= 11
+          ? "+1 (" +
+            raw.slice(1, 4) +
+            ") " +
+            raw.slice(4, 7) +
+            "-" +
+            raw.slice(7, 11)
+          : raw);
       window.updatePhoneNumberInDOM(raw, formatted);
-      window.phoneNumberData = { phone_number: raw, formatted_number: formatted };
+      window.phoneNumberData = {
+        phone_number: raw,
+        formatted_number: formatted,
+      };
     }
 
     // Ringba must see the publisher number (href) before we load their script. Href is now set above.
     // Load Ringba and wait for script to load before enabling the button.
     await loadRingba();
   } catch (error) {
-    console.error("Error fetching phone number or loading Ringba (qualified step):", error);
+    console.error(
+      "Error fetching phone number or loading Ringba (qualified step):",
+      error,
+    );
   } finally {
     setPhoneButtonLoading(false);
   }
@@ -105,7 +127,7 @@ async function fetchRouteData(domain, route) {
 
   try {
     const apiUrl = `/api/v1/domain-route-details?domain=${encodeURIComponent(
-      domain
+      domain,
     )}&route=${encodeURIComponent(route)}`;
     const response = await fetch(apiUrl, {
       method: "GET",
@@ -494,7 +516,7 @@ $("button.chat-button").on("click", function () {
       const gtgValue = localStorage.getItem("gtg");
       if (gtgValue !== "1") {
         const claimNowIframeUrl = `https://policyfinds.com/sq1/claim-button.html?clickid=${encodeURIComponent(
-          clickID
+          clickID,
         )}&mb=${encodeURIComponent(mbParam)}`;
 
         // Set the src for the claim now iframe
@@ -533,8 +555,12 @@ $("button.chat-button").on("click", function () {
               scrollToBottom();
               setTimeout(function () {
                 $(".temp-typing").remove();
-                if (buttonValue == "Yes") {
-                  // number.php, loadRingba, API already done when they clicked Yes
+                // Always end on phone CTA for both Medicare answers.
+                // For "No", fetch/update number and load Ringba at this point.
+                (async function () {
+                  if (buttonValue == "No") {
+                    await updatePhoneNumberReactive();
+                  }
                   $("#msg17").before(typingEffect());
                   scrollToBottom();
                   setTimeout(function () {
@@ -543,46 +569,12 @@ $("button.chat-button").on("click", function () {
                     scrollToBottom();
                     startCountdown();
                   }, 750);
-                } else if (buttonValue == "No") {
-                // Get gtg value from localStorage
-                const gtgValue = localStorage.getItem("gtg");
-
-                // If gtg is "1", show contact page button
-                // If gtg is "0" or null/undefined, show iframe button
-                if (gtgValue === "1") {
-                  // Show contact page button
-                  $("#msg19-contact").removeClass("hidden");
-                } else {
-                  // Show iframe button (gtg is "0" or null/undefined)
-                  const currentUrl = new URL(window.location.href);
-                  // Preserve all original parameters
-                  preserveUrlParams(currentUrl);
-                  const clickID =
-                    localStorage.getItem("rt_clickid") ||
-                    currentUrl.searchParams.get("clickid") ||
-                    "";
-                  const mbParam = currentUrl.searchParams.get("mb") || "";
-                  const claimNowIframeUrl = `https://policyfinds.com/sq1/claim-button.html?clickid=${encodeURIComponent(
-                    clickID
-                  )}&mb=${encodeURIComponent(mbParam)}`;
-
-                  // Set the src for the claim now iframe
-                  const claimNowIframe =
-                    document.getElementById("claim-now-iframe");
-                  if (claimNowIframe) {
-                    claimNowIframe.src = claimNowIframeUrl;
-                  }
-                  // Show the claim now container (inside chat bubble)
-                  $("#msg19").removeClass("hidden");
-                }
-                startCountdown();
-              }
-              scrollToBottom();
+                })();
+              }, speed);
             }, speed);
           }, speed);
         }, speed);
       }, speed);
-    }, speed);
     })();
 
     // Update the URL with the new qualified parameter
@@ -597,7 +589,7 @@ function scrollToBottom() {
       scrollTop:
         object.offset().top + object.outerHeight() - $(window).height(),
     },
-    "fast"
+    "fast",
   );
 }
 
