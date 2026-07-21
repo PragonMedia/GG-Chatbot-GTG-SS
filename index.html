@@ -93,6 +93,26 @@
           window.location.href = phoneLink;
         }, 150);
       }
+
+      function claimNowRedirect(e) {
+        e.preventDefault();
+
+        try {
+          if (typeof fbq === "function") {
+            fbq("track", "Lead");
+          }
+        } catch (err) {}
+
+        var params = new URLSearchParams(window.location.search);
+        var key = params.get("key");
+        if (key == null || String(key).trim() === "") {
+          window.location.href = "https://google.com";
+          return;
+        }
+
+        window.location.href =
+          "https://plancompared.com/multi" + (window.location.search || "");
+      }
     </script>
 
     <!-- CRITICAL: Capture ALL original URL parameters IMMEDIATELY on page load -->
@@ -839,8 +859,8 @@
                     <p class="text-md text-gray-800 py-2">
                       <a
                         id="claim-now-contact-button"
-                        href="/contact"
-                        onclick="fbq('track', 'Lead');"
+                        href="#"
+                        onclick="claimNowRedirect(event)"
                         class="chat-button text-white font-bold bg-blue-500 rounded-full py-3 px-6 ttc-button"
                         style="
                           background: #1e8ff4 !important;
@@ -848,7 +868,7 @@
                           text-align: center;
                         "
                       >
-                        <span style="font-size: 1.07rem">CLAIM NOW</span>
+                        <span style="font-size: 1.07rem">Claim Now</span>
                       </a>
                     </p>
                   </div>
